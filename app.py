@@ -20,8 +20,10 @@ def get_db():
         database="defaultdb",
         ssl_ca=None,
         ssl_verify_cert=False,
-        ssl_disabled=False
+        ssl_disabled=False,
+        connection_timeout=10 # This prevents the "hanging"
     )
+    
 
 # 2. Create the table automatically on startup
 try:
