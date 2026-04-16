@@ -12,9 +12,14 @@ SECRET = "SUPER_SECRET_KEY_123"
 
 # 1. Connect to Aiven (Using your Service URI)
 def get_db():
-    # Replace the string below with your REAL Aiven Service URI if it's different
-    uri = "mysql://avnadmin:AVNS_8w1r9ZNS4ptYvZUPJ4P@mysql-32bffbe3-soshteshrimat-c34a.d.aivencloud.com:15210/defaultdb?ssl-mode=REQUIRED"
-    return mysql.connector.connect(uri)
+    return mysql.connector.connect(
+        host="mysql-32bffbe3-soshteshrimat-c34a.d.aivencloud.com",
+        user="avnadmin",
+        password="AVNS_8w1r9ZNS4ptYvZUPJ4P", # Replace this if you changed your password
+        port=15210,
+        database="defaultdb",
+        ssl_disabled=False  # This forces the SSL connection Aiven wants
+    )
 
 # 2. Create the table automatically on startup
 try:
