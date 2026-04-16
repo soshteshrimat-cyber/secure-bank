@@ -5,6 +5,18 @@ import time, hmac, hashlib, struct, bcrypt
 from datetime import datetime
 
 app = Flask(__name__)
+# This part creates the table automatically
+with db.cursor() as cursor:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        otp VARCHAR(6),
+        otp_created_at DATETIME
+    )
+    """)
+    db.commit()
 CORS(app)
 
 SECRET = "SUPER_SECRET_KEY_123"
