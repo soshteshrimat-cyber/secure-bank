@@ -15,10 +15,12 @@ def get_db():
     return mysql.connector.connect(
         host="mysql-32bffbe3-soshteshrimat-c34a.d.aivencloud.com",
         user="avnadmin",
-        password="AVNS_8w1r9ZNS4ptYvZUPJ4P", # Replace this if you changed your password
+        password="AVNS_8w1r9ZNS4ptYvZUPJ4P", 
         port=15210,
         database="defaultdb",
-        ssl_disabled=False  # This forces the SSL connection Aiven wants
+        ssl_ca=None,
+        ssl_verify_cert=False,
+        ssl_disabled=False
     )
 
 # 2. Create the table automatically on startup
