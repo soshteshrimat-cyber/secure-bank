@@ -58,8 +58,16 @@ def generate_otp_logic(username):
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
-    u, p = data["username"], data["password"]
+    
+    # These two lines MUST come first:
+    username = data.get('username')
+    password = data.get('password')
+    
+    # NOW you can print them:
     print(f"--- NEW USER REGISTERED: {username} | PASSWORD: {password} ---")
+    
+    db = get_db()
+    # ... rest of the code
     db = get_db(); cursor = db.cursor()
     hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
     try:
