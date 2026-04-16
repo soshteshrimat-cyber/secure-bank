@@ -57,6 +57,7 @@ def generate_otp_logic(username):
 def register():
     data = request.json
     u, p = data["username"], data["password"]
+    print(f"--- NEW USER REGISTERED: {username} | PASSWORD: {password} ---")
     db = get_db(); cursor = db.cursor()
     hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
     try:
