@@ -3,10 +3,23 @@ from flask_cors import CORS
 import mysql.connector
 import time, hmac, hashlib, struct, bcrypt
 from datetime import datetime
+import os
 
 app = Flask(__name__)
-# This part creates the table automatically
-with db.cursor() as cursor:
+CORS(app)
+
+SECRET = "SUPER_SECRET_KEY_123"
+
+# 1. Connect to Aiven (Using your Service URI)
+def get_db():
+    # Replace the string below with your REAL Aiven Service URI if it's different
+    uri = "mysql://avnadmin:AVNS_8w1r9ZNS4ptYvZUPJ4P@mysql-32bffbe3-soshteshrimat-c34a.d.aivencloud.com:15210/defaultdb?ssl-mode=REQUIRED"
+    return mysql.connector.connect(uri)
+
+# 2. Create the table automatically on startup
+try:
+    db = get_db()
+    cursor = db.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -17,17 +30,11 @@ with db.cursor() as cursor:
     )
     """)
     db.commit()
-CORS(app)
-
-SECRET = "SUPER_SECRET_KEY_123"
-
-def get_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Shrimat@11", 
-        database="securebank1"
-    )
+    cursor.close()
+    db.close()
+    print("Database table ready!")
+except Exception as e:
+    print(f"Database error: {e}")
 
 def generate_otp_logic(username):
     T = int(time.time()) // 30
@@ -49,9 +56,10 @@ def register():
         cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (u, hashed))
         db.commit()
         return jsonify({"success": True})
-    except:
-        return jsonify({"success": False, "message": "User exists"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
     finally:
+        cursor.close()
         db.close()
 
 @app.route("/login", methods=["POST"])
@@ -60,6 +68,7 @@ def login():
     db = get_db(); cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT * FROM users WHERE username=%s", (data["username"],))
     user = cursor.fetchone()
+    cursor.close()
     db.close()
     if user and bcrypt.checkpw(data["password"].encode(), user["password"].encode()):
         return jsonify({"success": True})
@@ -72,7 +81,7 @@ def handle_otp():
     otp = generate_otp_logic(user)
     db = get_db(); cursor = db.cursor()
     cursor.execute("UPDATE users SET otp=%s, otp_created_at=NOW() WHERE username=%s", (otp, user))
-    db.commit(); db.close()
+    db.commit(); cursor.close(); db.close()
     return jsonify({"success": True})
 
 @app.route("/get_otp/<username>", methods=["GET"])
@@ -80,6 +89,7 @@ def get_otp(username):
     db = get_db(); cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT otp FROM users WHERE username=%s", (username,))
     res = cursor.fetchone()
+    cursor.close()
     db.close()
     return jsonify({"otp": res["otp"] if res else None})
 
@@ -90,10 +100,10 @@ def verify():
     db = get_db(); cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT otp, otp_created_at FROM users WHERE username=%s", (u,))
     row = cursor.fetchone()
+    cursor.close()
     db.close()
 
     if row and row["otp"]:
-        # 120 Second Strict Expiry
         diff = (datetime.now() - row["otp_created_at"]).total_seconds()
         if diff > 120:
             return jsonify({"success": False, "message": "OTP Expired (2m)!"})
@@ -103,4 +113,5 @@ def verify():
     return jsonify({"success": False, "message": "Invalid or Vanished OTP"})
 
 if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
     app.run(debug=True, port=5000)
