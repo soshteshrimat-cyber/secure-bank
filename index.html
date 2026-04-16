@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SecureBank - Final</title>
+    <title>SecureBank - Live</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
         body { height: 100vh; background: linear-gradient(135deg, #0a1f44, #1c3d5a, #2a5298); display: flex; justify-content: center; align-items: center; }
@@ -61,21 +61,22 @@
         async function register() {
             const u = document.getElementById("u").value, p = document.getElementById("p").value;
             if(p !== document.getElementById("cp").value) return document.getElementById("re").innerText = "Mismatch";
-            const res = await fetch("http://127.0.0.1:5000/register", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: u, password: p}) });
+            // FIXED URL HERE
+            const res = await fetch("https://secure-bank-api.onrender.com/register", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: u, password: p}) });
             if((await res.json()).success) { regCard.classList.add("hidden"); logCard.classList.remove("hidden"); }
         }
 
         async function login() {
             user = document.getElementById("lu").value;
-            const res = await fetch("http://127.0.0.1:5000/login", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user, password: document.getElementById("lp").value}) });
+            const res = await fetch("https://secure-bank-api.onrender.com/login", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user, password: document.getElementById("lp").value}) });
             if((await res.json()).success) {
-                await fetch("http://127.0.0.1:5000/request_otp", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user}) });
+                await fetch("https://secure-bank-api.onrender.com/request_otp", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user}) });
                 logCard.classList.add("hidden"); otpCard.classList.remove("hidden"); start();
             }
         }
 
         async function showOTP() {
-            const res = await fetch(`http://127.0.0.1:5000/get_otp/${user}`);
+            const res = await fetch(`https://secure-bank-api.onrender.com/get_otp/${user}`);
             const data = await res.json();
             const d = document.getElementById("od");
             d.innerText = data.otp === null ? "VANISHED" : data.otp;
@@ -84,14 +85,14 @@
 
         async function verify() {
             let o = ""; document.querySelectorAll(".of").forEach(i => o += i.value);
-            const res = await fetch("http://127.0.0.1:5000/verify_otp", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user, otp: o}) });
+            const res = await fetch("https://secure-bank-api.onrender.com/verify_otp", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user, otp: o}) });
             const data = await res.json();
             if(data.success) { otpCard.classList.add("hidden"); sc.classList.remove("hidden"); }
             else { document.getElementById("oe").innerText = data.message; }
         }
 
         async function resend() {
-            await fetch("http://127.0.0.1:5000/resend_otp", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user}) });
+            await fetch("https://secure-bank-api.onrender.com/resend_otp", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: user}) });
             document.getElementById("oe").innerText = "New OTP Sent"; start();
         }
 
