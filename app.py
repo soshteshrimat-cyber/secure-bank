@@ -10,7 +10,7 @@ CORS(app)
 
 SECRET = "SUPER_SECRET_KEY_123"
 
-# 1. Connect to Aiven (Using your Service URI)
+# 1. Connect to Aiven
 def get_db():
     return mysql.connector.connect(
         host="mysql-32bffbe3-soshteshrimat-c34a.d.aivencloud.com",
@@ -21,11 +21,10 @@ def get_db():
         ssl_ca=None,
         ssl_verify_cert=False,
         ssl_disabled=False,
-        connection_timeout=10 # This prevents the "hanging"
+        connection_timeout=10
     )
-    
 
-# 2. Create the table automatically on startup
+# 2. Create the table automatically (Updated to match your local list)
 try:
     db = get_db()
     cursor = db.cursor()
@@ -35,7 +34,8 @@ try:
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         otp VARCHAR(6),
-        otp_created_at DATETIME
+        otp_created_at DATETIME,
+        last_login DATETIME
     )
     """)
     db.commit()
@@ -58,23 +58,23 @@ def generate_otp_logic(username):
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
-    
-    # These two lines MUST come first:
     username = data.get('username')
     password = data.get('password')
     
-    # NOW you can print them:
-    print(f"--- NEW USER REGISTERED: {username} | PASSWORD: {password} ---")
+    print(f"--- REGISTERING: {username} ---")
+
+    # Hashing the password correctly
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     
     db = get_db()
-    # ... rest of the code
-    db = get_db(); cursor = db.cursor()
-    hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
+    cursor = db.cursor()
     try:
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (u, hashed))
+        # Fixed: using 'username' and 'hashed' instead of 'u' and 'p'
+        cursor.execute("INSERT INTO users (username, password, last_login) VALUES (%s, %s, NOW())", (username, hashed))
         db.commit()
         return jsonify({"success": True})
     except Exception as e:
+        print(f"Register Error: {e}")
         return jsonify({"success": False, "message": str(e)})
     finally:
         cursor.close()
@@ -83,13 +83,21 @@ def register():
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
     db = get_db(); cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM users WHERE username=%s", (data["username"],))
+    cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
     user = cursor.fetchone()
-    cursor.close()
-    db.close()
-    if user and bcrypt.checkpw(data["password"].encode(), user["password"].encode()):
+    
+    if user and bcrypt.checkpw(password.encode(), user["password"].encode()):
+        # Update last_login time
+        cursor.execute("UPDATE users SET last_login=NOW() WHERE username=%s", (username,))
+        db.commit()
+        cursor.close(); db.close()
         return jsonify({"success": True})
+    
+    cursor.close(); db.close()
     return jsonify({"success": False, "message": "Invalid Login"})
 
 @app.route("/request_otp", methods=["POST"])
@@ -107,8 +115,7 @@ def get_otp(username):
     db = get_db(); cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT otp FROM users WHERE username=%s", (username,))
     res = cursor.fetchone()
-    cursor.close()
-    db.close()
+    cursor.close(); db.close()
     return jsonify({"otp": res["otp"] if res else None})
 
 @app.route("/verify_otp", methods=["POST"])
@@ -118,8 +125,7 @@ def verify():
     db = get_db(); cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT otp, otp_created_at FROM users WHERE username=%s", (u,))
     row = cursor.fetchone()
-    cursor.close()
-    db.close()
+    cursor.close(); db.close()
 
     if row and row["otp"]:
         diff = (datetime.now() - row["otp_created_at"]).total_seconds()
@@ -131,5 +137,6 @@ def verify():
     return jsonify({"success": False, "message": "Invalid or Vanished OTP"})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
-    app.run(debug=True, port=5000)
+    # Render uses the PORT environment variable
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
